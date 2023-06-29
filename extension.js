@@ -32,6 +32,10 @@ function getMainBox() {
   return document.querySelector(".rm-article-wrapper");
 }
 
+function getTopbar() {
+  return document.querySelector(".rm-topbar");
+}
+
 var saveScrollPosition = debounce(function () {
   console.log("ROAM_SAVE_SCROLLBAR_POSITION save Scroll Position");
 
@@ -93,6 +97,10 @@ var handleUrlChange = debounce(function () {
   }
 }, 100);
 
+function handleDbclickTopbar() {
+  getMainBox().scrollTop = 0;
+}
+
 // ----------------------------------------------
 
 function onload() {
@@ -100,16 +108,19 @@ function onload() {
 
   window.addEventListener("popstate", handleUrlChange);
 
+  // getMainBox().addEventListener("scroll", saveScrollPosition);
   initScrollEvent(1000);
-}
 
+  getTopbar().addEventListener("dblclick", handleDbclickTopbar);
+}
 function onunload() {
   console.log("ROAM_SAVE_SCROLLBAR_POSITION onunload");
 
   window.removeEventListener("popstate", handleUrlChange);
 
-  var mainBox = getMainBox();
-  mainBox.removeEventListener("scroll", saveScrollPosition);
+  getMainBox().removeEventListener("scroll", saveScrollPosition);
+
+  getTopbar().removeEventListener("dblclick", handleDbclickTopbar);
 }
 
 export default {
