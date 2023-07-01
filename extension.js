@@ -1,18 +1,108 @@
 window.ROAMRESEARCH_SAVE_SCROLLBAR_POSITION =
   window.ROAMRESEARCH_SAVE_SCROLLBAR_POSITION || {};
 
+function getMainBox() {
+  return document.querySelector(".rm-article-wrapper");
+}
+
+function getAllPagesTableBox() {
+  return document.querySelector("#rm-all-pages-column-titles+div>div");
+}
+
+function getTopbar() {
+  return document.querySelector(".rm-topbar");
+}
+
+function getRoamBlocks() {
+  return document.querySelectorAll(".rm-article-wrapper .roam-block-container");
+}
+
+function getPageEntries() {
+  return document.querySelectorAll(".rm-all-pages .table .rm-pages-row");
+}
+
+function getPageType() {
+  const title = document.title;
+  if (["Daily Notes", "Graph Overview", "All Pages"].includes(title)) {
+    return title;
+  } else if (location.href.includes("/page/")) {
+    return "Page";
+  }
+
+  // Daily Notes        .rm-article-wrapper .roam-block-container
+  // Page               .rm-article-wrapper .roam-block-container
+  // All Pages          .rm-all-pages .table .rm-pages-row
+  // Graph Overview     no scrollbar
+}
+
+function getScrollBox() {
+  let box = null;
+  const pageType = getPageType();
+  if (pageType === "Daily Notes" || pageType === "Page") {
+    box = getMainBox();
+  } else if (pageType === "All Pages") {
+    box = getAllPagesTableBox();
+  }
+  return box;
+}
+
+function getPageId() {
+  const currentGraph = document.querySelector(".rm-db-title").textContent;
+  const currentPage = location.href
+    .replace(`https://roamresearch.com/#/app/${currentGraph}`, "")
+    .replace("/page/", "");
+  const pageType = getPageType();
+
+  if (pageType === "Daily Notes" || pageType === "All Pages") {
+    return `${currentGraph}/${pageType}`;
+  } else if (pageType === "Page") {
+    return `${currentGraph}/${currentPage}`;
+  }
+  return "";
+}
+
+function scrollPageReady(callback) {
+  // when scrollPage is ready(Daily Notes/Page/All Pages), callback will be called, can get contents
+  const pageType = getPageType();
+  let getContTimer = null;
+  let endTimer = null;
+
+  const getPageContent = function (method) {
+    const len = method().length;
+    // console.log("get PageContent:", method.name, len);
+
+    if (len) {
+      clearInterval(getContTimer);
+      clearTimeout(endTimer);
+      callback();
+    }
+  };
+
+  getContTimer = setInterval(() => {
+    if (pageType === "Daily Notes" || pageType === "Page") {
+      getPageContent(getRoamBlocks);
+    } else if (pageType === "All Pages") {
+      getPageContent(getPageEntries);
+    }
+  }, 10);
+
+  endTimer = setTimeout(() => {
+    clearInterval(getContTimer);
+  }, 3000);
+}
+
 function debounce(func, wait, immediate = false) {
-  var timer, result;
+  let timer, result;
   return function () {
-    var context = this;
-    var args = arguments;
-    var laterFn = function () {
+    const context = this;
+    const args = arguments;
+    const laterFn = function () {
       timer = null;
       if (!immediate) {
         result = func.apply(context, args);
       }
     };
-    var callNow = immediate && !timer;
+    const callNow = immediate && !timer;
 
     clearTimeout(timer);
     timer = setTimeout(laterFn, wait);
@@ -23,102 +113,88 @@ function debounce(func, wait, immediate = false) {
   };
 }
 
-function getPageId() {
-  var pageId = location.href;
-  return pageId;
-}
+const saveScrollPosition = debounce(function () {
+  // console.log("---scrollPage is ready, save ScrollPosition");
 
-function getMainBox() {
-  return document.querySelector(".rm-article-wrapper");
-}
+  const scrollBox = getScrollBox();
 
-function getTopbar() {
-  return document.querySelector(".rm-topbar");
-}
+  window.ROAMRESEARCH_SAVE_SCROLLBAR_POSITION[getPageId()] =
+      scrollBox.scrollTop;
 
-var saveScrollPosition = debounce(function () {
-  console.log("ROAM_SAVE_SCROLLBAR_POSITION save Scroll Position");
-
-  var mainBox = getMainBox();
-
-  if (
-    !mainBox ||
-    location.href.indexOf("/graph") > -1 ||
-    location.href.indexOf("/search") > -1
-  ) {
-    return;
-  }
-
-  window.ROAMRESEARCH_SAVE_SCROLLBAR_POSITION[getPageId()] = mainBox.scrollTop;
-
-  console.log(
-    "ROAM_SAVE_SCROLLBAR_POSITION data",
-    window.ROAMRESEARCH_SAVE_SCROLLBAR_POSITION
-  );
+  // console.log(
+  //   "ROAM_SAVE_SCROLLBAR_POSITION data",
+  //   window.ROAMRESEARCH_SAVE_SCROLLBAR_POSITION
+  // );
 }, 500);
 
-function initScrollEvent(time) {
+function initScrollEvent() {
+  // console.log("---scrollPage is ready, init ScrollEvent");
+
   setTimeout(() => {
-    var mainBox = getMainBox();
-    mainBox.removeEventListener("scroll", saveScrollPosition);
-    mainBox.addEventListener("scroll", saveScrollPosition);
-  }, time);
+    const scrollBox = getScrollBox();
+    scrollBox.removeEventListener("scroll", saveScrollPosition);
+    scrollBox.addEventListener("scroll", saveScrollPosition);
+  }, 10);
 }
 
 function recoveryScrollPosition() {
-  var mainBox = getMainBox();
-  var targetNum = window.ROAMRESEARCH_SAVE_SCROLLBAR_POSITION[getPageId()];
+  // console.log("---scrollPage is ready, recovery ScrollPosition");
+  // console.log('window.ROAMRESEARCH_SAVE_SCROLLBAR_POSITION',window.ROAMRESEARCH_SAVE_SCROLLBAR_POSITION)
+
+  const scrollBox = getScrollBox();
+  const targetNum = window.ROAMRESEARCH_SAVE_SCROLLBAR_POSITION[getPageId()];
+
 
   if (!targetNum) {
-    initScrollEvent(0);
+    scrollBox.scrollTop = 0;
+    initScrollEvent();
     return;
   }
 
-  var step = 300;
-  var timer = setInterval(() => {
-    if (mainBox.scrollTop + step < targetNum) {
-      mainBox.scrollTop += step;
+  const step = 300;
+  const timer = setInterval(() => {
+    if (scrollBox.scrollTop + step < targetNum) {
+      scrollBox.scrollTop += step;
     } else {
-      mainBox.scrollTop = targetNum;
+      scrollBox.scrollTop = targetNum;
       clearInterval(timer);
-      initScrollEvent(0);
+      initScrollEvent();
     }
   }, 10);
 }
 
-var handleUrlChange = debounce(function () {
-  console.log("ROAM_SAVE_SCROLLBAR_POSITION url Change");
-  var contentsLen = document.querySelectorAll(
-    ".roam-article .roam-block-container"
-  )?.length;
+const handleUrlChange = debounce(function () {
+  // console.log("---------route change---------");
 
-  if (contentsLen) {
+  scrollPageReady(function () {
+    // console.log("---scrollPage Ready---", getPageType());
     recoveryScrollPosition();
-  }
+  });
 }, 100);
 
 function handleDbclickTopbar() {
-  getMainBox().scrollTop = 0;
+  getScrollBox().scrollTop = 0;
 }
 
 // ----------------------------------------------
 
 function onload() {
-  console.log("ROAM_SAVE_SCROLLBAR_POSITION onload");
-
+  // console.log("ROAM_SAVE_SCROLLBAR_POSITION onload");
   window.addEventListener("popstate", handleUrlChange);
 
-  // getMainBox().addEventListener("scroll", saveScrollPosition);
-  initScrollEvent(1000);
+  // getScrollBox().addEventListener("scroll", saveScrollPosition);
+  scrollPageReady(function () {
+    // console.log("---scrollPage Ready---first", getPageType());
+    initScrollEvent();
+  });
 
   getTopbar().addEventListener("dblclick", handleDbclickTopbar);
 }
 function onunload() {
-  console.log("ROAM_SAVE_SCROLLBAR_POSITION onunload");
-
+  // console.log("ROAM_SAVE_SCROLLBAR_POSITION onunload");
   window.removeEventListener("popstate", handleUrlChange);
 
-  getMainBox().removeEventListener("scroll", saveScrollPosition);
+  getScrollBox().removeEventListener("scroll", saveScrollPosition);
 
   getTopbar().removeEventListener("dblclick", handleDbclickTopbar);
 }

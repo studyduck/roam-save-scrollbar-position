@@ -4,6 +4,8 @@ A simple Roam Research extension that saves the position of the scrollbar on eac
 
 It just saves the position of the scrollbar in the browser's memory, so when you refresh the browser, the last saved data will be cleared.
 
-Demo:
+Demo1:
+![demo1](./demo1.gif)
 
-![demo](https://raw.githubusercontent.com/studyduck/roam-save-scrollbar-position/main/demo.gif)
+Demo2:
+![demo2](./demo2.gif)

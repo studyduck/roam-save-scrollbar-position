@@ -5,3 +5,9 @@
 
 ### Changed
 ### Fixed
+
+
+## [0.0.2] -- 2023-07-02
+
+### Added
+ - Support for saving scrollbar position in "All Pages"
